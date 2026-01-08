@@ -24,24 +24,9 @@ class User(AbstractUser):
 
 # Курс
 class Course(models.Model):
-    level_choices = [
-        ('beginner', 'Beginner'),
-        ('intermediate', 'Intermediate'),
-        ('advanced', 'Advanced'),
-    ]
-
-    category_choices = [
-        ('programming', 'Programming'),
-        ('design', 'Design'),
-        ('marketing', 'Marketing'),
-        ('business', 'Business'),
-    ]
-
-    unit_of_time_choices = [
-        ('hours', 'Часы'),
-        ('weeks', 'Недели'),
-        ('months', 'Месяцы'),
-    ]
+    level_choices = [('beginner', 'Beginner'), ('intermediate', 'Intermediate'), ('advanced', 'Advanced')]
+    category_choices = [('programming', 'Programming'), ('design', 'Design'), ('marketing', 'Marketing'), ('business', 'Business')]
+    unit_of_time_choices = [('hours', 'Часы'), ('weeks', 'Недели'), ('months', 'Месяцы')]
 
     name = models.CharField("Название", max_length=50)
     description = models.TextField("Описание", max_length=250)
@@ -54,7 +39,13 @@ class Course(models.Model):
     published = models.BooleanField("Опубликован")
     created_at = models.DateField("Дата создания", auto_now_add=True)
     teacher = models.ForeignKey(User, on_delete=models.CASCADE, related_name="teaching_courses", verbose_name="Преподаватель")
-    students = models.ManyToManyField(User, related_name="enrolled_courses", verbose_name="Студенты")
+    # Связь через Enrollment
+    students = models.ManyToManyField(
+        User, 
+        through='Enrollment', 
+        related_name="enrolled_courses", 
+        verbose_name="Студенты"
+    )
 
     class Meta:
         verbose_name = "Курс"
@@ -85,25 +76,10 @@ class Lesson(models.Model):
 
     history = HistoricalRecords()
 
-# Задание
-class Assignment(models.Model):
-    lesson = models.ForeignKey(Lesson, on_delete=models.CASCADE, verbose_name="Урок")
-    name = models.CharField("Название", max_length=50)
-    description = models.TextField("Описание", max_length=250)
-    max_score = models.PositiveIntegerField("Максимальный балл")
-    due_date = models.DateTimeField("Срок сдачи")
-
-    class Meta:
-        verbose_name = "Задание"
-        verbose_name_plural = "Задания"
-
-    def __str__(self):
-        return f"Задание: {self.name} ({self.lesson.course.name})"
-
 # Запись на курс
 class Enrollment(models.Model):
     student = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Студент")
-    course = models.ForeignKey(Course, on_delete=models.CASCADE, verbose_name="Курс")
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, verbose_name="Курс", related_name="enrollments")
     enrolled_at = models.DateTimeField("Дата записи", auto_now_add=True)
     progress = models.DecimalField("Прогресс (%)", max_digits=5, decimal_places=2, default=0)
     completed_at = models.DateTimeField("Дата завершения", null=True, blank=True)
@@ -116,19 +92,34 @@ class Enrollment(models.Model):
     def __str__(self):
         return f"{self.student} записан на {self.course.name}"
 
+# Задание
+class Assignment(models.Model):
+    lesson = models.ForeignKey(Lesson, on_delete=models.CASCADE, verbose_name="Урок", related_name='assignments')
+    name = models.CharField("Название", max_length=50)
+    description = models.TextField("Описание", max_length=250)
+    max_score = models.PositiveIntegerField("Максимальный балл")
+    due_date = models.DateTimeField("Срок сдачи")
+
+    class Meta:
+        verbose_name = "Задание"
+        verbose_name_plural = "Задания"
+
+    def __str__(self):
+        return f"Задание: {self.name} ({self.lesson.course.name})"
+
 # Решение задания
 class Submission(models.Model):
     status_choices = [
         ('pending', 'На проверке'),
         ('checked', 'Проверено'),
-        ('late', 'Просрочено'),
+        ('late', 'Просрочено')
     ]
 
     assignment = models.ForeignKey(Assignment, on_delete=models.CASCADE, verbose_name="Задание")
     student = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Студент")
     answer = models.TextField("Решение")
     file = models.FileField("Файл", upload_to="submissions/", null=True, blank=True)
-    score = models.PositiveIntegerField("Оценка", null=True, blank=True)
+    score = models.PositiveIntegerField("Оценка", null=True, blank=True, default=0)
     teacher_comment = models.TextField("Комментарий преподавателя", null=True, blank=True)
     submitted_at = models.DateTimeField("Дата отправки", auto_now_add=True)
     status = models.CharField("Статус", max_length=20, choices=status_choices, default='pending')

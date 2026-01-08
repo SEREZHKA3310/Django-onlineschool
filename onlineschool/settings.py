@@ -40,6 +40,7 @@ INSTALLED_APPS = [
 
     'courses.apps.CoursesConfig', 
     
+    'import_export',
     'simple_history',
     'django_filters',
     'rest_framework',
