@@ -3,7 +3,8 @@ from datetime import timedelta
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.exceptions import PermissionDenied
+
+from django.shortcuts import render, redirect, get_object_or_404
 
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
@@ -17,7 +18,6 @@ from .serializers import (
     CourseSerializer, LessonSerializer, AssignmentSerializer,
     SubmissionSerializer, EnrollmentSerializer, ProgressSerializer
 )
-
 
 class CourseViewSet(viewsets.ModelViewSet):
     queryset = Course.objects.all()
@@ -47,9 +47,14 @@ class CourseViewSet(viewsets.ModelViewSet):
 
     # POST /api/courses/
     def perform_create(self, serializer):
-        if not self.request.user.is_teacher:
-            raise PermissionDenied("Только преподаватель может создавать курсы")
-        serializer.save(teacher=self.request.user)
+        teacher = self.request.user if self.request.user.is_authenticated else None
+
+        if not teacher:
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            teacher = User.objects.filter(role='teacher').first() or User.objects.first()
+
+        serializer.save(teacher=teacher)
 
     # PUT /api/courses/{id}/
     def update(self, request, pk=None):
@@ -109,17 +114,6 @@ class CourseViewSet(viewsets.ModelViewSet):
         Enrollment.objects.create(student=student, course=course)
         return Response({"detail": "Вы успешно записались на курс."})
 
-    # GET /api/courses/my/
-    @action(methods=["GET"], detail=False)
-    def my(self, request):
-        user = request.user
-        courses = (
-            Course.objects.filter(students=user) |
-            Course.objects.filter(teacher=user)
-        )
-        serializer = CourseSerializer(courses.distinct(), many=True)
-        return Response(serializer.data)
-
     # GET /api/courses/{id}/lessons/
     @action(methods=["GET"], detail=True)
     def lessons(self, request, pk=None):
@@ -169,7 +163,7 @@ class CourseViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
     # Q-запрос
-    # Курсы с уровнем "beginner" И категорией "programming" И ценой до 5000 ИЛИ с количеством студентов более 100 и неопубликованные
+    # Курсы с уровнем "beginner" И категорией "programming" И ценой до 5000 ИЛИ с количеством студентов более 100 И опубликованные
     @action(methods=["GET"], detail=False)
     def q_courses_complex(self, request):
         courses = (
@@ -178,11 +172,10 @@ class CourseViewSet(viewsets.ModelViewSet):
             .filter(
                 (
                     Q(level="beginner", category="programming", price__lte=5000)
-                    |
-                    Q(students_count__gt=100)
+                    | Q(students_count__gt=100)
                 )
-                &
-                ~Q(published=True)
+                & Q(published=True)
+                & ~Q(price=0)
             )
         )
 
@@ -198,6 +191,19 @@ class LessonViewSet(viewsets.ReadOnlyModelViewSet):
     search_fields = ["name", "description"]
     ordering_fields = ["serial_number"]
     ordering = ["serial_number"]
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        course_id = self.request.query_params.get('course_id', None)
+        if course_id is not None:
+            queryset = queryset.filter(course_id=course_id)
+        return queryset
+
+    @action(methods=["GET"], detail=False, url_path='course/(?P<course_id>[^/.]+)')
+    def by_course(self, request, course_id=None):
+        lessons = Lesson.objects.filter(course_id=course_id)
+        serializer = self.get_serializer(lessons, many=True)
+        return Response(serializer.data)
 
 
 class AssignmentViewSet(viewsets.ReadOnlyModelViewSet):
@@ -239,19 +245,18 @@ class SubmissionViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
     # Q-запрос
-    # Решения заданий со статусом "pending" И оценкой выше 80 ИЛИ отправленные в последние 7 дней И НЕ оцененные
+    # Решения заданий со статусом "pending" И оценкой выше 80 ИЛИ отправленные в последние 7 дней И НЕ проверенные
     @action(methods=["GET"], detail=False)
     def q_submissions_complex(self, request):
         seven_days_ago = timezone.now() - timedelta(days=7)
 
         submissions = Submission.objects.filter(
             (
-                Q(status="pending", score__gt=80)
-                |
-                Q(submitted_at__gte=seven_days_ago)
+                Q(status="pending")
+                & Q(score__gt=80)
+                | Q(submitted_at__gte=seven_days_ago)
             )
-            &
-            ~Q(status="checked")
+            & ~Q(status="checked")
         )
 
         serializer = SubmissionSerializer(submissions, many=True)
@@ -268,3 +273,71 @@ class ProgressViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         return Progress.objects.filter(student=self.request.user)
+
+def home(request):
+    return render(request, 'courses/home.html')
+
+
+def courses_list(request):
+    courses = Course.objects.all()
+    return render(request, 'courses/courses_list.html', {'courses': courses})
+
+
+def course_create(request):
+    if request.method == 'POST':
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        default_teacher = User.objects.filter(role='teacher').first()
+        if not default_teacher:
+            default_teacher = User.objects.first()
+        if not default_teacher:
+            default_teacher = User.objects.create_user(
+                username='default_teacher',
+                email='teacher@example.com',
+                role='teacher'
+            )
+
+        Course.objects.create(
+            name=request.POST['name'],
+            description=request.POST.get('description', ''),
+            price=int(request.POST['price']),
+            level=request.POST['level'],
+            category=request.POST['category'],
+            duration=int(request.POST['duration']),
+            unit_of_time=request.POST['unit_of_time'],
+            image=request.FILES['image'],
+            published=request.POST.get('published') == 'on',
+            teacher=default_teacher
+        )
+        return redirect('courses_list')
+
+    return render(request, 'courses/courses_form.html')
+
+
+def course_update(request, pk):
+    course = get_object_or_404(Course, pk=pk)
+
+    if request.method == 'POST':
+        course.name = request.POST['name']
+        course.description = request.POST.get('description', '')
+        course.price = int(request.POST['price'])
+        course.level = request.POST['level']
+        course.category = request.POST['category']
+        course.duration = int(request.POST['duration'])
+        course.unit_of_time = request.POST['unit_of_time']
+        course.published = request.POST.get('published') == 'on'
+
+        if 'image' in request.FILES and request.FILES['image']:
+            course.image = request.FILES['image']
+
+        course.save()
+        return redirect('courses_list')
+
+    return render(request, 'courses/courses_form.html', {'course': course})
+
+
+def course_delete(request, pk):
+    course = get_object_or_404(Course, pk=pk)
+    course.delete()
+    return redirect('courses_list')
+    

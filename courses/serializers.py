@@ -1,5 +1,4 @@
 from rest_framework import serializers
-from django.utils import timezone
 from django.contrib.auth import get_user_model
 from .models import (
     Course, Lesson, Assignment, Enrollment, Submission, Progress
@@ -7,18 +6,23 @@ from .models import (
 
 User = get_user_model()
 
+
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ["id", "username", "first_name", "last_name", "email",]
 
+
 class CourseSerializer(serializers.ModelSerializer):
     teacher = UserSerializer(read_only=True)
-    
+
     class Meta:
         model = Course
         fields = ["id", "name", "description", "price", "unit_of_time", "duration", "level", "category", "image", "published", "created_at", "teacher", "students",]
         read_only_fields = ("created_at", "teacher", "students")
+        extra_kwargs = {
+            'image': {'required': True, 'allow_null': False}
+        }
 
     def validate_level(self, value):
         valid = ['beginner', 'intermediate', 'advanced']
@@ -40,11 +44,8 @@ class CourseSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, validated_data):
-        user = self.context["request"].user
-        if not user.is_teacher:
-            raise serializers.ValidationError("Создавать курсы могут только преподаватели.")
-        validated_data["teacher"] = user
         return super().create(validated_data)
+
 
 class LessonSerializer(serializers.ModelSerializer):
     class Meta:
@@ -64,6 +65,7 @@ class LessonSerializer(serializers.ModelSerializer):
             })
         return data
 
+
 class AssignmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Assignment
@@ -74,11 +76,13 @@ class AssignmentSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Максимальный балл должен быть положительным числом.")
         return value
 
+
 class EnrollmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Enrollment
         fields = ["id", "student", "course", "enrolled_at", "progress", "completed_at",]
         read_only_fields = ("student", "enrolled_at", "progress", "completed_at")
+
 
 class SubmissionSerializer(serializers.ModelSerializer):
     class Meta:
@@ -89,18 +93,18 @@ class SubmissionSerializer(serializers.ModelSerializer):
     def validate_score(self, value):
         assignment = self.instance.assignment
         max_score = assignment.max_score
-        
+
         if value > max_score:
             raise serializers.ValidationError(f"Оценка не может превышать {max_score}.")
         if value < 0:
             raise serializers.ValidationError("Оценка не может быть отрицательной.")
-        
+
         return value
 
     def validate(self, data):
         if self.instance is not None:
             return data
-    
+
         request = self.context["request"]
         student = request.user
         assignment = data.get("assignment")
@@ -115,6 +119,7 @@ class SubmissionSerializer(serializers.ModelSerializer):
                 "assignment": "Вы не записаны на курс, поэтому не можете отправить решение."
             })
         return data
+
 
 class ProgressSerializer(serializers.ModelSerializer):
     class Meta:

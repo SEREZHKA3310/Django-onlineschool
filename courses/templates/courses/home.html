@@ -1,0 +1,19 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Home</title>
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  </head>
+  <body>
+    <h1>Online School API</h1>
+
+    <h2>API Endpoints</h2>
+    <p>Административная панель: <a href="/admin/">/admin/</a></p>
+    <p>API курсы: <a href="/api/courses/">/api/courses/</a></p>
+
+    <h2>Курсы</h2>
+    <p>Посмотреть список курсов: <a href="/courses/">/courses/</a></p>
+    <p>Добавить курс: <a href="/courses/add/">/courses/add/</a></p>
+  </body>
+</html>

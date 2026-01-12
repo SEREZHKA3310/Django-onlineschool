@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 from simple_history.models import HistoricalRecords
 
+
 class User(AbstractUser):
     ROLE_CHOICES = [
         ("teacher", "Teacher"),
@@ -22,6 +23,7 @@ class User(AbstractUser):
     def __str__(self):
         return f"{self.first_name} {self.last_name} ({self.email})"
 
+
 # Курс
 class Course(models.Model):
     level_choices = [('beginner', 'Beginner'), ('intermediate', 'Intermediate'), ('advanced', 'Advanced')]
@@ -41,9 +43,9 @@ class Course(models.Model):
     teacher = models.ForeignKey(User, on_delete=models.CASCADE, related_name="teaching_courses", verbose_name="Преподаватель")
     # Связь через Enrollment
     students = models.ManyToManyField(
-        User, 
-        through='Enrollment', 
-        related_name="enrolled_courses", 
+        User,
+        through='Enrollment',
+        related_name="enrolled_courses",
         verbose_name="Студенты"
     )
 
@@ -55,6 +57,7 @@ class Course(models.Model):
         return self.name
 
     history = HistoricalRecords()
+
 
 # Урок
 class Lesson(models.Model):
@@ -76,6 +79,7 @@ class Lesson(models.Model):
 
     history = HistoricalRecords()
 
+
 # Запись на курс
 class Enrollment(models.Model):
     student = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Студент")
@@ -92,6 +96,7 @@ class Enrollment(models.Model):
     def __str__(self):
         return f"{self.student} записан на {self.course.name}"
 
+
 # Задание
 class Assignment(models.Model):
     lesson = models.ForeignKey(Lesson, on_delete=models.CASCADE, verbose_name="Урок", related_name='assignments')
@@ -106,6 +111,7 @@ class Assignment(models.Model):
 
     def __str__(self):
         return f"Задание: {self.name} ({self.lesson.course.name})"
+
 
 # Решение задания
 class Submission(models.Model):
@@ -130,6 +136,7 @@ class Submission(models.Model):
 
     def __str__(self):
         return f"Решение {self.student} для {self.assignment.name}"
+
 
 # Прогресс урока
 class Progress(models.Model):

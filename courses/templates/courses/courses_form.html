@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<body>
+<h2>Курс</h2>
+
+<form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <p>
+        <label>Название:</label>
+        <input type="text" name="name" value="{{ course.name|default:'' }}" required>
+    </p>
+    <p>
+        <label>Описание:</label>
+        <textarea name="description" required>{{ course.description|default:'' }}</textarea>
+    </p>
+    <p>
+        <label>Цена:</label>
+        <input type="number" name="price" value="{{ course.price|default:'' }}" required>
+    </p>
+    <p>
+        <label>Уровень:</label>
+        <select name="level" required>
+            <option value="beginner" {% if course.level == 'beginner' %}selected{% endif %}>Beginner</option>
+            <option value="intermediate" {% if course.level == 'intermediate' %}selected{% endif %}>Intermediate</option>
+            <option value="advanced" {% if course.level == 'advanced' %}selected{% endif %}>Advanced</option>
+        </select>
+    </p>
+    <p>
+        <label>Категория:</label>
+        <select name="category" required>
+            <option value="programming" {% if course.category == 'programming' %}selected{% endif %}>Programming</option>
+            <option value="design" {% if course.category == 'design' %}selected{% endif %}>Design</option>
+            <option value="marketing" {% if course.category == 'marketing' %}selected{% endif %}>Marketing</option>
+            <option value="business" {% if course.category == 'business' %}selected{% endif %}>Business</option>
+        </select>
+    </p>
+    <p>
+        <label>Длительность:</label>
+        <input type="number" name="duration" value="{{ course.duration|default:'' }}" required>
+    </p>
+    <p>
+        <label>Единица времени:</label>
+        <select name="unit_of_time" required>
+            <option value="hours" {% if course.unit_of_time == 'hours' %}selected{% endif %}>Часы</option>
+            <option value="weeks" {% if course.unit_of_time == 'weeks' %}selected{% endif %}>Недели</option>
+            <option value="months" {% if course.unit_of_time == 'months' %}selected{% endif %}>Месяцы</option>
+        </select>
+    </p>
+    <p>
+        <label>Изображение:</label>
+        <input type="file" name="image" accept="image/*" {% if not course %}required{% endif %}>
+    </p>
+    <p>
+        <label>Опубликован:</label>
+        <input type="checkbox" name="published" {% if course.published %}checked{% endif %}>
+    </p>
+    <button type="submit">Сохранить</button>
+</form>
+</body>
+</html>

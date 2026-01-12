@@ -81,9 +81,13 @@ class SubmissionInline(admin.TabularInline):
     readonly_fields = ("submitted_at", "status")
 
 
-
 @admin.register(Course)
-class CourseAdmin(SimpleHistoryAdmin): 
+class CourseAdmin(ImportExportModelAdmin, SimpleHistoryAdmin):
+    resource_class = CourseResource
+
+    def get_export_formats(self):
+        return [base_formats.XLSX]
+
     list_display = ("id", "name", "price", "published", "level", "created_at", "lesson_count")
     list_display_links = ("name",)
     list_filter = ("published", "level", "category")
@@ -93,10 +97,10 @@ class CourseAdmin(SimpleHistoryAdmin):
     inlines = [LessonInline]
     raw_id_fields = ('teacher',)
 
-    @admin.display(description="Кол-во уроков") 
+    @admin.display(description="Кол-во уроков")
     def lesson_count(self, obj):
         return obj.lessons.count()
-    
+
     fieldsets = (
         ("Основная информация", {
             "fields": ("name", "description", "image")
@@ -116,11 +120,11 @@ class CourseAdmin(SimpleHistoryAdmin):
 
 @admin.register(Lesson)
 class LessonAdmin(SimpleHistoryAdmin):
-    list_display = ("id", "name", "course", "serial_number", "duration", "assignment_count") 
-    inlines = [AssignmentInline] 
+    list_display = ("id", "name", "course", "serial_number", "duration", "assignment_count")
+    inlines = [AssignmentInline]
 
-    @admin.display(description="Кол-во заданий") 
-    def assignment_count(self, obj): 
+    @admin.display(description="Кол-во заданий")
+    def assignment_count(self, obj):
         return obj.assignments.count()
 
     fieldsets = (
@@ -138,10 +142,10 @@ class AssignmentAdmin(admin.ModelAdmin):
     list_display = ("id", "name", "lesson", "max_score", "due_date", "is_overdue")
     inlines = [SubmissionInline]
 
-    @admin.display(description="Просрочено") 
+    @admin.display(description="Просрочено")
     def is_overdue(self, obj):
-        if not obj.due_date: 
-            return False 
+        if not obj.due_date:
+            return False
         return obj.due_date < timezone.now()
 
     fieldsets = (
