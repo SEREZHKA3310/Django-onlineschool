@@ -121,6 +121,9 @@ class CourseAdmin(ImportExportModelAdmin, SimpleHistoryAdmin):
 @admin.register(Lesson)
 class LessonAdmin(SimpleHistoryAdmin):
     list_display = ("id", "name", "course", "serial_number", "duration", "assignment_count")
+    list_display_links = ("id", "name")
+    list_filter = ("course", "duration")
+    search_fields = ("name", "description")
     inlines = [AssignmentInline]
 
     @admin.display(description="Кол-во заданий")
@@ -140,6 +143,9 @@ class LessonAdmin(SimpleHistoryAdmin):
 @admin.register(Assignment)
 class AssignmentAdmin(admin.ModelAdmin):
     list_display = ("id", "name", "lesson", "max_score", "due_date", "is_overdue")
+    list_display_links = ("id", "name")
+    list_filter = ("lesson__course", "due_date")
+    search_fields = ("name", "description")
     inlines = [SubmissionInline]
 
     @admin.display(description="Просрочено")
@@ -161,8 +167,10 @@ class AssignmentAdmin(admin.ModelAdmin):
 @admin.register(Enrollment)
 class EnrollmentAdmin(admin.ModelAdmin):
     list_display = ("id", "student", "course", "enrolled_at", "progress", "completed_at")
+    list_filter = ("course", "enrolled_at")
+    search_fields = ("student__email", "course__name")
     readonly_fields = ("enrolled_at",)
-    list_display_links = ("student",)
+    list_display_links = ("id", "student")
 
     fieldsets = (
         ("Запись на курс", {
@@ -181,8 +189,9 @@ class EnrollmentAdmin(admin.ModelAdmin):
 @admin.register(Submission)
 class SubmissionAdmin(admin.ModelAdmin):
     list_display = ("id", "assignment", "student", "score", "status", "submitted_at")
-    list_filter = ("status", "submitted_at")
-
+    list_display_links = ("id", "status")
+    list_filter = ("status", "submitted_at", "assignment__lesson__course")
+    search_fields = ("student__email", "assignment__name")
     readonly_fields = ("submitted_at",)
 
     fieldsets = (
@@ -201,8 +210,14 @@ class SubmissionAdmin(admin.ModelAdmin):
 
 @admin.register(Progress)
 class ProgressAdmin(admin.ModelAdmin):
-    list_display = ("id", "student", "lesson", "completed", "completed_at")
-    list_filter = ("lesson",)
+    list_display = ("id", "student_name", "lesson", "completed", "completed_at")
+    list_display_links = ("id", "lesson")
+    list_filter = ("lesson__course", "completed")
+    search_fields = ("student__email", "student__last_name")
+
+    @admin.display(description="Студент")
+    def student_name(self, obj):
+        return f"{obj.student.first_name} {obj.student.last_name}"
 
     fieldsets = (
         ("Прогресс урока", {
@@ -213,9 +228,10 @@ class ProgressAdmin(admin.ModelAdmin):
 
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
-    list_display = ("id", "email", "first_name", "last_name", "role")
+    list_display = ("id", "email", "first_name", "last_name", "role", "is_staff")
+    list_filter = ("role", "is_staff", "is_active")
     search_fields = ("email", "first_name", "last_name")
-    list_display_links = ("email",)
+    list_display_links = ("id", "email")
 
     fieldsets = (
         ("Основная информация", {

@@ -4,12 +4,9 @@ from simple_history.models import HistoricalRecords
 
 
 class User(AbstractUser):
-    ROLE_CHOICES = [
-        ("teacher", "Teacher"),
-        ("student", "Student"),
-    ]
+    ROLE_CHOICES = [("teacher", "Teacher"), ("student", "Student")]
 
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default="student")
+    role = models.CharField("Роль", max_length=20, choices=ROLE_CHOICES, default="student")
     created_at = models.DateTimeField("Дата регистрации", auto_now_add=True)
 
     class Meta:
@@ -37,7 +34,7 @@ class Course(models.Model):
     duration = models.PositiveIntegerField("Длительность")
     level = models.CharField("Уровень", max_length=20, choices=level_choices)
     category = models.CharField("Категория", max_length=20, choices=category_choices)
-    image = models.ImageField(upload_to="images/")
+    image = models.ImageField("Изображение", upload_to="images/")
     published = models.BooleanField("Опубликован")
     created_at = models.DateField("Дата создания", auto_now_add=True)
     teacher = models.ForeignKey(User, on_delete=models.CASCADE, related_name="teaching_courses", verbose_name="Преподаватель")
@@ -83,7 +80,7 @@ class Lesson(models.Model):
 # Запись на курс
 class Enrollment(models.Model):
     student = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Студент")
-    course = models.ForeignKey(Course, on_delete=models.CASCADE, verbose_name="Курс", related_name="enrollments")
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name="enrollments", verbose_name="Курс")
     enrolled_at = models.DateTimeField("Дата записи", auto_now_add=True)
     progress = models.DecimalField("Прогресс (%)", max_digits=5, decimal_places=2, default=0)
     completed_at = models.DateTimeField("Дата завершения", null=True, blank=True)
@@ -99,7 +96,7 @@ class Enrollment(models.Model):
 
 # Задание
 class Assignment(models.Model):
-    lesson = models.ForeignKey(Lesson, on_delete=models.CASCADE, verbose_name="Урок", related_name='assignments')
+    lesson = models.ForeignKey(Lesson, on_delete=models.CASCADE, related_name='assignments', verbose_name="Урок")
     name = models.CharField("Название", max_length=50)
     description = models.TextField("Описание", max_length=250)
     max_score = models.PositiveIntegerField("Максимальный балл")
@@ -115,11 +112,7 @@ class Assignment(models.Model):
 
 # Решение задания
 class Submission(models.Model):
-    status_choices = [
-        ('pending', 'На проверке'),
-        ('checked', 'Проверено'),
-        ('late', 'Просрочено')
-    ]
+    status_choices = [('pending', 'На проверке'), ('checked', 'Проверено'), ('late', 'Просрочено')]
 
     assignment = models.ForeignKey(Assignment, on_delete=models.CASCADE, verbose_name="Задание")
     student = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Студент")

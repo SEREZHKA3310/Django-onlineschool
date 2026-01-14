@@ -19,6 +19,7 @@ from .serializers import (
     SubmissionSerializer, EnrollmentSerializer, ProgressSerializer
 )
 
+
 class CourseViewSet(viewsets.ModelViewSet):
     queryset = Course.objects.all()
     serializer_class = CourseSerializer
@@ -274,6 +275,7 @@ class ProgressViewSet(viewsets.ReadOnlyModelViewSet):
     def get_queryset(self):
         return Progress.objects.filter(student=self.request.user)
 
+
 def home(request):
     return render(request, 'courses/home.html')
 
@@ -340,4 +342,3 @@ def course_delete(request, pk):
     course = get_object_or_404(Course, pk=pk)
     course.delete()
     return redirect('courses_list')
-    
