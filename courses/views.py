@@ -10,6 +10,7 @@ from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import OrderingFilter, SearchFilter
 from django.db.models import Q, Count
+from django.contrib.auth import get_user_model
 
 from .models import (
     Course, Lesson, Assignment, Submission, Enrollment, Progress
@@ -287,7 +288,6 @@ def courses_list(request):
 
 def course_create(request):
     if request.method == 'POST':
-        from django.contrib.auth import get_user_model
         User = get_user_model()
         default_teacher = User.objects.filter(role='teacher').first()
         if not default_teacher:
