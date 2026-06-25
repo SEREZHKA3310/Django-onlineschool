@@ -1,0 +1,15 @@
+{% extends "courses/base.html" %}
+
+{% block title %}Удалить курс{% endblock %}
+
+{% block content %}
+<div class="confirm-card">
+    <h1>Удалить курс?</h1>
+    <p>Курс «<strong>{{ course.name }}</strong>» и все связанные уроки будут удалены безвозвратно.</p>
+    <form method="post" class="form-actions">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">Удалить</button>
+        <a href="{% url 'course_detail' course.pk %}" class="btn btn-outline">Отмена</a>
+    </form>
+</div>
+{% endblock %}

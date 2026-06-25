@@ -11,6 +11,8 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 from pathlib import Path
+import sentry_sdk
+from sentry_sdk.integrations.django import DjangoIntegration
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -26,6 +28,9 @@ SECRET_KEY = 'django-insecure-oum%n3ov=)!#o_6=r#$w3w$ve@u4wv^bdp*xi=6&x@^vm%z^y@
 DEBUG = True
 
 ALLOWED_HOSTS = []
+
+# Django Silk — профилирование запросов (только при DEBUG)
+SILK_ENABLED = DEBUG
 
 
 # Application definition
@@ -47,6 +52,9 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',
 ]
 
+if SILK_ENABLED:
+    INSTALLED_APPS.append('silk')
+
 MIDDLEWARE = [
     'simple_history.middleware.HistoryRequestMiddleware',
     'django.middleware.security.SecurityMiddleware',
@@ -57,6 +65,9 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+if SILK_ENABLED:
+    MIDDLEWARE.insert(0, 'silk.middleware.SilkyMiddleware')
 
 ROOT_URLCONF = 'onlineschool.urls'
 
@@ -132,10 +143,15 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 AUTH_USER_MODEL = 'courses.User'
 
+LOGIN_URL = 'login'
+LOGIN_REDIRECT_URL = 'home'
+LOGOUT_REDIRECT_URL = 'home'
+
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.TokenAuthentication', 
+        'rest_framework.authentication.TokenAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
     ],
     
     'DEFAULT_PERMISSION_CLASSES': [
@@ -152,3 +168,23 @@ REST_FRAMEWORK = {
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 12,
 }
+
+# --- Django Silk ---
+if SILK_ENABLED:
+    SILKY_PYTHON_PROFILER = True
+    SILKY_PYTHON_PROFILER_BINARY = True
+    SILKY_META = True
+    SILKY_INTERCEPT_PERCENT = 100
+    SILKY_MAX_REQUEST_BODY_SIZE = -1
+    SILKY_MAX_RESPONSE_BODY_SIZE = -1
+    SILKY_AUTHENTICATION = True
+    SILKY_AUTHORISATION = True
+
+sentry_sdk.init(
+    dsn="https://25cdde34b9181b09f5c0ec1e8b82b383@o4511509273378816.ingest.us.sentry.io/4511509284782080",
+    integrations=[DjangoIntegration()],
+
+    send_default_pii=True,
+    
+    traces_sample_rate=1.0, 
+)

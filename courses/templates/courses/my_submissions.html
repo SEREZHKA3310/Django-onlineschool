@@ -1,0 +1,24 @@
+{% extends "courses/base.html" %}
+
+{% block title %}Мои решения{% endblock %}
+
+{% block content %}
+<h1>Мои решения</h1>
+{% if submissions %}
+<table>
+    <tr><th>Задание</th><th>Курс</th><th>Дата</th><th>Статус</th><th>Оценка</th><th>Комментарий</th></tr>
+    {% for s in submissions %}
+    <tr>
+        <td>{{ s.assignment.name }}</td>
+        <td>{{ s.assignment.lesson.course.name }}</td>
+        <td>{{ s.submitted_at|date:"d.m.Y" }}</td>
+        <td>{{ s.get_status_display }}</td>
+        <td>{% if s.status == 'checked' %}{{ s.score }}/{{ s.assignment.max_score }}{% else %}—{% endif %}</td>
+        <td>{{ s.teacher_comment|default:"—" }}</td>
+    </tr>
+    {% endfor %}
+</table>
+{% else %}
+<p class="empty">Нет решений.</p>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,49 @@
+{% extends "courses/base.html" %}
+
+{% block title %}Аналитика{% endblock %}
+
+{% block content %}
+<h1>Аналитика</h1>
+
+<h2>Популярные курсы</h2>
+{% if popular_courses %}
+<table>
+    <tr>
+        <th>Курс</th>
+        <th>Студентов</th>
+        <th>Средний балл</th>
+        <th>Цена</th>
+    </tr>
+    {% for c in popular_courses %}
+    <tr>
+        <td><a href="{% url 'course_detail' c.pk %}">{{ c.name }}</a></td>
+        <td>{{ c.students_count }}</td>
+        <td>{% if c.average_score %}{{ c.average_score|floatformat:1 }}{% else %}—{% endif %}</td>
+        <td>{% if c.price == 0 %}0{% else %}{{ c.price }}{% endif %} ₽</td>
+    </tr>
+    {% endfor %}
+</table>
+{% else %}
+<p class="empty">Нет курсов.</p>
+{% endif %}
+
+<h2>Просроченные задания</h2>
+{% if overdue_assignments %}
+<table>
+    <tr>
+        <th>Задание</th>
+        <th>Курс</th>
+        <th>Срок</th>
+    </tr>
+    {% for a in overdue_assignments %}
+    <tr>
+        <td>{{ a.name }}</td>
+        <td>{{ a.lesson.course.name }}</td>
+        <td>{{ a.due_date|date:"d.m.Y H:i" }}</td>
+    </tr>
+    {% endfor %}
+</table>
+{% else %}
+<p class="empty">Просроченных заданий нет.</p>
+{% endif %}
+{% endblock %}

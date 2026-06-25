@@ -1,0 +1,46 @@
+{% extends "courses/base.html" %}
+
+{% block title %}{% if lesson %}Редактировать{% else %}Новый{% endif %} урок{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>{% if lesson %}Редактировать урок{% else %}Новый урок{% endif %}</h1>
+    <span class="hint">Курс: {{ course.name }}</span>
+</div>
+
+<form method="post" class="form form-wide">
+    {% csrf_token %}
+    <div class="form-row">
+        <div class="form-group">
+            <label>Название</label>
+            <input type="text" name="name" value="{{ lesson.name|default:'' }}" required>
+        </div>
+        <div class="form-group">
+            <label>Порядковый номер</label>
+            <input type="number" name="serial_number" min="1" value="{{ lesson.serial_number|default:'1' }}" required>
+        </div>
+    </div>
+    <div class="form-group">
+        <label>Краткое описание</label>
+        <textarea name="description" rows="2" required>{{ lesson.description|default:'' }}</textarea>
+    </div>
+    <div class="form-group">
+        <label>Содержание</label>
+        <textarea name="content" rows="5" required>{{ lesson.content|default:'' }}</textarea>
+    </div>
+    <div class="form-row">
+        <div class="form-group">
+            <label>Ссылка на видео</label>
+            <input type="url" name="link_to_video" value="{{ lesson.link_to_video|default:'' }}">
+        </div>
+        <div class="form-group">
+            <label>Длительность (часы)</label>
+            <input type="number" name="duration" step="0.1" min="0.1" value="{{ lesson.duration|default:'1.0' }}" required>
+        </div>
+    </div>
+    <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Сохранить</button>
+        <a href="{% url 'course_detail' course.pk %}" class="btn btn-outline">Отмена</a>
+    </div>
+</form>
+{% endblock %}

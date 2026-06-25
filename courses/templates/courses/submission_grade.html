@@ -1,0 +1,28 @@
+{% extends "courses/base.html" %}
+
+{% block title %}Проверка — {{ submission.assignment.name }}{% endblock %}
+
+{% block content %}
+<h1>Проверка работы</h1>
+<p class="hint">{{ submission.student.username }} · {{ submission.assignment.lesson.course.name }}</p>
+
+<h2>{{ submission.assignment.name }}</h2>
+<p>Отправлено: {{ submission.submitted_at|date:"d.m.Y H:i" }} · {{ submission.get_status_display }}</p>
+
+<h3>Ответ</h3>
+<p>{{ submission.answer|linebreaks }}</p>
+{% if submission.file %}<p><a href="{{ submission.file.url }}">Файл</a></p>{% endif %}
+
+<form method="post">
+    {% csrf_token %}
+    <label>Оценка (max {{ submission.assignment.max_score }})</label>
+    <input type="number" name="score" min="0" max="{{ submission.assignment.max_score }}" value="{{ submission.score|default:'' }}" required>
+
+    <label>Комментарий</label>
+    <textarea name="teacher_comment" rows="3">{{ submission.teacher_comment|default:'' }}</textarea>
+
+    {% if error %}<p class="error">{{ error }}</p>{% endif %}
+    <button type="submit">Сохранить</button>
+    <a href="{% url 'submissions_list' %}">Назад</a>
+</form>
+{% endblock %}

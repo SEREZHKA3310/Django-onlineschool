@@ -1,0 +1,39 @@
+{% extends "courses/base.html" %}
+
+{% block title %}Сдать задание — {{ assignment.name }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>{{ assignment.name }}</h1>
+    <span class="hint">{{ assignment.lesson.course.name }} · срок: {{ assignment.due_date|date:"d.m.Y H:i" }}</span>
+</div>
+
+{% if existing %}
+<div class="panel">
+    <p>Вы уже отправили решение (статус: {{ existing.get_status_display }}).</p>
+    <p><strong>Ваш ответ:</strong> {{ existing.answer|truncatechars:200 }}</p>
+    <a href="{% url 'my_submissions' %}" class="btn btn-outline">К моим решениям</a>
+</div>
+{% else %}
+<form method="post" enctype="multipart/form-data" class="form form-wide">
+    {% csrf_token %}
+    <div class="form-group">
+        <label>Описание задания</label>
+        <p class="readonly-block">{{ assignment.description }}</p>
+    </div>
+    <div class="form-group">
+        <label>Ваше решение</label>
+        <textarea name="answer" rows="8" required placeholder="Введите текст решения..."></textarea>
+    </div>
+    <div class="form-group">
+        <label>Файл (необязательно)</label>
+        <input type="file" name="file">
+    </div>
+    {% if error %}<p class="error">{{ error }}</p>{% endif %}
+    <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Отправить на проверку</button>
+        <a href="{% url 'course_detail' assignment.lesson.course_id %}" class="btn btn-outline">Отмена</a>
+    </div>
+</form>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,42 @@
+{% extends "courses/base.html" %}
+
+{% block title %}Проверка работ{% endblock %}
+
+{% block content %}
+<h1>Проверка работ</h1>
+
+<form method="get" class="filters">
+    <select name="status">
+        <option value="">Все статусы</option>
+        {% for val, label in status_choices %}
+        <option value="{{ val }}" {% if status_filter == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+    </select>
+    <button type="submit">Фильтр</button>
+</form>
+
+{% if submissions %}
+<table>
+    <tr>
+        <th>Студент</th>
+        <th>Задание</th>
+        <th>Курс</th>
+        <th>Дата</th>
+        <th>Статус</th>
+        <th></th>
+    </tr>
+    {% for s in submissions %}
+    <tr>
+        <td>{{ s.student.username }}</td>
+        <td>{{ s.assignment.name }}</td>
+        <td>{{ s.assignment.lesson.course.name }}</td>
+        <td>{{ s.submitted_at|date:"d.m.Y H:i" }}</td>
+        <td>{{ s.get_status_display }}</td>
+        <td><a href="{% url 'submission_grade' s.pk %}">Проверить</a></td>
+    </tr>
+    {% endfor %}
+</table>
+{% else %}
+<p class="empty">Решений нет.</p>
+{% endif %}
+{% endblock %}

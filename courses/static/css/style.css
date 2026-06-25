@@ -1,29 +1,81 @@
 body {
     font-family: sans-serif;
     line-height: 1.5;
-    max-width: 600px;
-    margin: 40px;
-    color: black;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 16px;
+    color: #222;
 }
 
-h2 {
-  margin-top: 30px;
-  color: gray;
+header {
+    border-bottom: 1px solid #ccc;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
 }
 
-p {
-  background: whitesmoke;
-  padding: 10px;
-  border-radius: 5px;
-  border-left: solid blue;
+header nav a {
+    margin-right: 12px;
 }
 
-a {
-  color: blue;
-  text-decoration: none;
-  font-weight: bold;
+main { margin-bottom: 30px; }
+
+footer {
+    border-top: 1px solid #ccc;
+    padding-top: 10px;
+    font-size: 0.9em;
+    color: #666;
 }
 
-a:hover {
-  text-decoration: underline;
+h1 { font-size: 1.4em; }
+h2 { font-size: 1.15em; margin-top: 24px; }
+
+a { color: #0645ad; }
+
+.error { color: #c00; }
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0;
 }
+
+table th, table td {
+    border: 1px solid #ccc;
+    padding: 6px 10px;
+    text-align: left;
+}
+
+table th { background: #f5f5f5; }
+
+form label { display: block; margin-top: 10px; }
+
+form input[type="text"],
+form input[type="number"],
+form input[type="password"],
+form input[type="file"],
+form input[type="datetime-local"],
+form input[type="search"],
+form select,
+form textarea {
+    width: 100%;
+    max-width: 500px;
+    padding: 4px;
+    margin-top: 4px;
+}
+
+button, .btn {
+    display: inline-block;
+    margin-top: 10px;
+    margin-right: 8px;
+    padding: 6px 12px;
+    cursor: pointer;
+}
+
+.filters { margin: 12px 0; }
+.filters select, .filters input { width: auto; max-width: none; margin-right: 8px; }
+
+.course-list, .lesson-list { list-style: none; padding: 0; }
+.course-list li, .lesson-list li { border: 1px solid #ddd; padding: 10px; margin-bottom: 8px; }
+
+.hint { color: #666; font-size: 0.9em; }
+.empty { color: #666; font-style: italic; }

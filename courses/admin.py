@@ -1,17 +1,29 @@
+"""Настройка Django Admin и экспорт курсов через import_export."""
+
+from __future__ import annotations
+
 from django.contrib import admin
+from django.http import HttpRequest
 from django.utils import timezone
-from import_export import resources, fields
+from import_export import fields, resources
 from import_export.admin import ImportExportModelAdmin
-from simple_history.admin import SimpleHistoryAdmin
 from import_export.formats import base_formats
+from simple_history.admin import SimpleHistoryAdmin
 
 from .models import (
-    User, Course, Lesson, Assignment,
-    Enrollment, Submission, Progress
+    Assignment,
+    Course,
+    Enrollment,
+    Lesson,
+    Progress,
+    Submission,
+    User,
 )
 
 
 class CourseResource(resources.ModelResource):
+    """Ресурс экспорта опубликованных курсов с агрегированной статистикой."""
+
     students_count = fields.Field(column_name="Количество студентов")
     lessons_count = fields.Field(column_name="Количество уроков")
     average_rating = fields.Field(column_name="Средний рейтинг")
@@ -27,55 +39,88 @@ class CourseResource(resources.ModelResource):
             "lessons_count", "average_rating", "created_at",
         )
 
-    def get_export_queryset(self, request):
+    def get_export_queryset(self, request: HttpRequest):
+        """
+        Ограничивает экспорт только опубликованными курсами.
+
+        Args:
+            request: HTTP-запрос админки.
+
+        Returns:
+            Queryset курсов для экспорта.
+        """
         return super().get_export_queryset(request).filter(published=True)
 
-    def dehydrate_teacher_display(self, course):
+    def dehydrate_teacher_display(self, course: Course) -> str:
+        """ФИО или email преподавателя для экспорта."""
         return f"{course.teacher.first_name} {course.teacher.last_name}".strip() or course.teacher.email
 
-    def dehydrate_level_display(self, course):
+    def dehydrate_level_display(self, course: Course) -> str:
+        """Человекочитаемый уровень курса."""
         return course.get_level_display()
 
-    def dehydrate_category_display(self, course):
+    def dehydrate_category_display(self, course: Course) -> str:
+        """Человекочитаемая категория курса."""
         return course.get_category_display()
 
-    def dehydrate_students_count(self, course):
+    def dehydrate_students_count(self, course: Course) -> int:
+        """Количество записавшихся студентов."""
         return course.students.count()
 
-    def dehydrate_lessons_count(self, course):
+    def dehydrate_lessons_count(self, course: Course) -> int:
+        """Количество уроков в курсе."""
         return course.lessons.count()
 
-    def dehydrate_average_rating(self, course):
+    def dehydrate_average_rating(self, course: Course) -> float:
+        """
+        Средний балл по решениям курса.
+
+        Args:
+            course: Экспортируемый курс.
+
+        Returns:
+            Среднее значение score или 0.
+        """
         scores = Submission.objects.filter(
             assignment__lesson__course=course,
-            score__isnull=False
+            score__isnull=False,
         ).values_list("score", flat=True)
         return round(sum(scores) / len(scores), 2) if scores else 0
 
-    def dehydrate_price(self, course):
+    def dehydrate_price(self, course: Course) -> str:
+        """Цена курса в формате для отчёта."""
         return f"{course.price:,.2f} ₽"
 
-    def dehydrate_created_at(self, course):
+    def dehydrate_created_at(self, course: Course) -> str:
+        """Дата создания в формате ДД.ММ.ГГГГ."""
         return course.created_at.strftime("%d.%m.%Y")
 
 
 class LessonInline(admin.TabularInline):
+    """Инлайн уроков на странице курса."""
+
     model = Lesson
     extra = 0
 
 
 class EnrollmentInline(admin.TabularInline):
+    """Инлайн записей студентов (не используется в CourseAdmin по умолчанию)."""
+
     model = Enrollment
     extra = 0
     readonly_fields = ("enrolled_at",)
 
 
 class AssignmentInline(admin.TabularInline):
+    """Инлайн заданий на странице урока."""
+
     model = Assignment
     extra = 0
 
 
 class SubmissionInline(admin.TabularInline):
+    """Инлайн решений на странице задания."""
+
     model = Submission
     extra = 0
     readonly_fields = ("submitted_at", "status")
@@ -83,9 +128,12 @@ class SubmissionInline(admin.TabularInline):
 
 @admin.register(Course)
 class CourseAdmin(ImportExportModelAdmin, SimpleHistoryAdmin):
+    """Админка курсов с историей изменений и экспортом XLSX."""
+
     resource_class = CourseResource
 
-    def get_export_formats(self):
+    def get_export_formats(self) -> list:
+        """Форматы экспорта — только Excel."""
         return [base_formats.XLSX]
 
     list_display = ("id", "name", "price", "published", "level", "created_at", "lesson_count")
@@ -95,31 +143,33 @@ class CourseAdmin(ImportExportModelAdmin, SimpleHistoryAdmin):
     date_hierarchy = "created_at"
     readonly_fields = ("created_at",)
     inlines = [LessonInline]
-    raw_id_fields = ('teacher',)
+    raw_id_fields = ("teacher",)
 
     @admin.display(description="Кол-во уроков")
-    def lesson_count(self, obj):
+    def lesson_count(self, obj: Course) -> int:
+        """
+        Количество уроков в курсе для list_display.
+
+        Args:
+            obj: Объект курса.
+
+        Returns:
+            Число уроков.
+        """
         return obj.lessons.count()
 
     fieldsets = (
-        ("Основная информация", {
-            "fields": ("name", "description", "image")
-        }),
-        ("Параметры курса", {
-            "fields": ("level", "category", "duration", "unit_of_time", "price")
-        }),
-        ("Публикация", {
-            "fields": ("published", "teacher")
-        }),
-        ("Служебная информация", {
-            "classes": ("collapse",),
-            "fields": ("created_at",)
-        }),
+        ("Основная информация", {"fields": ("name", "description", "image")}),
+        ("Параметры курса", {"fields": ("level", "category", "duration", "unit_of_time", "price")}),
+        ("Публикация", {"fields": ("published", "teacher")}),
+        ("Служебная информация", {"classes": ("collapse",), "fields": ("created_at",)}),
     )
 
 
 @admin.register(Lesson)
 class LessonAdmin(SimpleHistoryAdmin):
+    """Админка уроков с историей изменений."""
+
     list_display = ("id", "name", "course", "serial_number", "duration", "assignment_count")
     list_display_links = ("id", "name")
     list_filter = ("course", "duration")
@@ -127,21 +177,20 @@ class LessonAdmin(SimpleHistoryAdmin):
     inlines = [AssignmentInline]
 
     @admin.display(description="Кол-во заданий")
-    def assignment_count(self, obj):
+    def assignment_count(self, obj: Lesson) -> int:
+        """Количество заданий у урока."""
         return obj.assignments.count()
 
     fieldsets = (
-        ("Основное", {
-            "fields": ("course", "name", "serial_number")
-        }),
-        ("Контент", {
-            "fields": ("description", "content", "link_to_video", "duration")
-        }),
+        ("Основное", {"fields": ("course", "name", "serial_number")}),
+        ("Контент", {"fields": ("description", "content", "link_to_video", "duration")}),
     )
 
 
 @admin.register(Assignment)
 class AssignmentAdmin(admin.ModelAdmin):
+    """Админка заданий."""
+
     list_display = ("id", "name", "lesson", "max_score", "due_date", "is_overdue")
     list_display_links = ("id", "name")
     list_filter = ("lesson__course", "due_date")
@@ -149,23 +198,30 @@ class AssignmentAdmin(admin.ModelAdmin):
     inlines = [SubmissionInline]
 
     @admin.display(description="Просрочено")
-    def is_overdue(self, obj):
+    def is_overdue(self, obj: Assignment) -> bool:
+        """
+        Просрочено ли задание.
+
+        Args:
+            obj: Объект задания.
+
+        Returns:
+            True, если due_date в прошлом.
+        """
         if not obj.due_date:
             return False
         return obj.due_date < timezone.now()
 
     fieldsets = (
-        ("Основное", {
-            "fields": ("lesson", "name", "description")
-        }),
-        ("Оценивание", {
-            "fields": ("max_score", "due_date")
-        }),
+        ("Основное", {"fields": ("lesson", "name", "description")}),
+        ("Оценивание", {"fields": ("max_score", "due_date")}),
     )
 
 
 @admin.register(Enrollment)
 class EnrollmentAdmin(admin.ModelAdmin):
+    """Админка записей студентов на курсы."""
+
     list_display = ("id", "student", "course", "enrolled_at", "progress", "completed_at")
     list_filter = ("course", "enrolled_at")
     search_fields = ("student__email", "course__name")
@@ -173,21 +229,16 @@ class EnrollmentAdmin(admin.ModelAdmin):
     list_display_links = ("id", "student")
 
     fieldsets = (
-        ("Запись на курс", {
-            "fields": ("student", "course")
-        }),
-        ("Прогресс", {
-            "fields": ("progress", "completed_at")
-        }),
-        ("Служебная информация", {
-            "classes": ("collapse",),
-            "fields": ("enrolled_at",)
-        }),
+        ("Запись на курс", {"fields": ("student", "course")}),
+        ("Прогресс", {"fields": ("progress", "completed_at")}),
+        ("Служебная информация", {"classes": ("collapse",), "fields": ("enrolled_at",)}),
     )
 
 
 @admin.register(Submission)
 class SubmissionAdmin(admin.ModelAdmin):
+    """Админка решений студентов."""
+
     list_display = ("id", "assignment", "student", "score", "status", "submitted_at")
     list_display_links = ("id", "status")
     list_filter = ("status", "submitted_at", "assignment__lesson__course")
@@ -195,50 +246,41 @@ class SubmissionAdmin(admin.ModelAdmin):
     readonly_fields = ("submitted_at",)
 
     fieldsets = (
-        ("Решение", {
-            "fields": ("assignment", "student", "answer", "file")
-        }),
-        ("Проверка", {
-            "fields": ("score", "teacher_comment", "status")
-        }),
-        ("Служебная информация", {
-            "classes": ("collapse",),
-            "fields": ("submitted_at",)
-        }),
+        ("Решение", {"fields": ("assignment", "student", "answer", "file")}),
+        ("Проверка", {"fields": ("score", "teacher_comment", "status")}),
+        ("Служебная информация", {"classes": ("collapse",), "fields": ("submitted_at",)}),
     )
 
 
 @admin.register(Progress)
 class ProgressAdmin(admin.ModelAdmin):
+    """Админка прогресса по урокам."""
+
     list_display = ("id", "student_name", "lesson", "completed", "completed_at")
     list_display_links = ("id", "lesson")
     list_filter = ("lesson__course", "completed")
     search_fields = ("student__email", "student__last_name")
 
     @admin.display(description="Студент")
-    def student_name(self, obj):
+    def student_name(self, obj: Progress) -> str:
+        """Имя студента для списка."""
         return f"{obj.student.first_name} {obj.student.last_name}"
 
     fieldsets = (
-        ("Прогресс урока", {
-            "fields": ("student", "lesson", "completed", "completed_at")
-        }),
+        ("Прогресс урока", {"fields": ("student", "lesson", "completed", "completed_at")}),
     )
 
 
 @admin.register(User)
 class UserAdmin(admin.ModelAdmin):
+    """Админка пользователей платформы."""
+
     list_display = ("id", "email", "first_name", "last_name", "role", "is_staff")
     list_filter = ("role", "is_staff", "is_active")
     search_fields = ("email", "first_name", "last_name")
     list_display_links = ("id", "email")
 
     fieldsets = (
-        ("Основная информация", {
-            "fields": ("email", "first_name", "last_name", "role")
-        }),
-        ("Доступ", {
-            "classes": ("collapse",),
-            "fields": ("is_active", "is_staff", "is_superuser")
-        }),
+        ("Основная информация", {"fields": ("email", "first_name", "last_name", "role")}),
+        ("Доступ", {"classes": ("collapse",), "fields": ("is_active", "is_staff", "is_superuser")}),
     )

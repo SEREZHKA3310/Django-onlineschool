@@ -1,0 +1,79 @@
+{% extends "courses/base.html" %}
+
+{% block title %}{{ course.name }}{% endblock %}
+
+{% block content %}
+<p><a href="{% url 'courses_list' %}">← Каталог</a></p>
+<h1>{{ course.name }}</h1>
+
+{% if user.is_staff %}
+<p>
+    <a href="{% url 'course_edit' course.pk %}">Редактировать</a> |
+    <a href="{% url 'lesson_add' course.pk %}">+ Урок</a> |
+    <a href="{% url 'course_delete' course.pk %}">Удалить</a>
+</p>
+{% endif %}
+
+<p>{{ course.description }}</p>
+<p>
+    {% if course.price == 0 %}Бесплатно{% else %}{{ course.price }} ₽{% endif %} ·
+    {{ course.get_level_display }} · {{ course.get_category_display }} ·
+    {{ course.duration }} {{ course.get_unit_of_time_display }}
+</p>
+
+{% if user.is_authenticated and not user.is_staff %}
+    {% if is_enrolled %}
+    <p><strong>Прогресс: {{ progress_percent }}%</strong></p>
+    {% else %}
+    <form method="post" action="{% url 'course_enroll' course.pk %}">
+        {% csrf_token %}
+        <button type="submit">Записаться на курс</button>
+    </form>
+    {% endif %}
+{% elif not user.is_authenticated %}
+<p><a href="{% url 'login' %}">Войдите</a>, чтобы записаться.</p>
+{% endif %}
+
+<h2>Уроки</h2>
+{% if lessons %}
+<ul class="lesson-list">
+    {% for lesson in lessons %}
+    <li>
+        <strong>{{ lesson.serial_number }}. {{ lesson.name }}</strong>
+        {% if user.is_staff %}
+        — <a href="{% url 'lesson_edit' lesson.pk %}">ред.</a>
+        <a href="{% url 'assignment_add' lesson.pk %}">+ задание</a>
+        <a href="{% url 'lesson_delete' lesson.pk %}">удал.</a>
+        {% elif is_enrolled %}
+            {% if lesson.id in completed_lesson_ids %}
+            (пройден)
+            {% else %}
+            <form method="post" action="{% url 'lesson_complete' lesson.pk %}" style="display:inline">
+                {% csrf_token %}
+                <button type="submit">Пройти</button>
+            </form>
+            {% endif %}
+        {% endif %}
+        <br>{{ lesson.description }}
+        {% if lesson.assignments.all %}
+        <ul>
+            {% for a in lesson.assignments.all %}
+            <li>
+                {{ a.name }} — до {{ a.due_date|date:"d.m.Y" }}, max {{ a.max_score }}
+                {% if user.is_staff %}
+                <a href="{% url 'assignment_edit' a.pk %}">ред.</a>
+                <a href="{% url 'assignment_delete' a.pk %}">удал.</a>
+                {% elif is_enrolled %}
+                <a href="{% url 'submit_assignment' a.pk %}">сдать</a>
+                {% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+    </li>
+    {% endfor %}
+</ul>
+{% else %}
+<p class="empty">Уроков нет.{% if user.is_staff %} <a href="{% url 'lesson_add' course.pk %}">Добавить</a>{% endif %}</p>
+{% endif %}
+{% endblock %}

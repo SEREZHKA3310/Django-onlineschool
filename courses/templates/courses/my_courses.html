@@ -1,0 +1,20 @@
+{% extends "courses/base.html" %}
+
+{% block title %}Мои курсы{% endblock %}
+
+{% block content %}
+<h1>Мои курсы</h1>
+{% if enrollments %}
+<ul>
+    {% for e in enrollments %}
+    <li>
+        <a href="{% url 'course_detail' e.course.pk %}">{{ e.course.name }}</a>
+        — прогресс {{ e.progress }}%
+        {% if e.completed_at %}(завершён){% endif %}
+    </li>
+    {% endfor %}
+</ul>
+{% else %}
+<p class="empty">Нет записей. <a href="{% url 'courses_list' %}">Каталог</a></p>
+{% endif %}
+{% endblock %}

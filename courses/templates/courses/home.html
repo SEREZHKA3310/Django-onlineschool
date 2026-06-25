@@ -1,19 +1,31 @@
-{% load static %}
-<!DOCTYPE html>
-<html>
-  <head>
-    <title>Home</title>
-    <link rel="stylesheet" href="{% static 'css/style.css' %}">
-  </head>
-  <body>
-    <h1>Online School API</h1>
+{% extends "courses/base.html" %}
 
-    <h2>API Endpoints</h2>
-    <p>Административная панель: <a href="/admin/">/admin/</a></p>
-    <p>API курсы: <a href="/api/courses/">/api/courses/</a></p>
+{% block title %}Главная{% endblock %}
 
-    <h2>Курсы</h2>
-    <p>Посмотреть список курсов: <a href="/courses/">/courses/</a></p>
-    <p>Добавить курс: <a href="/courses/add/">/courses/add/</a></p>
-  </body>
-</html>
+{% block content %}
+<h1>Online School</h1>
+<p><a href="{% url 'courses_list' %}">Каталог курсов</a></p>
+
+{% if is_staff %}
+<h2>Администратор</h2>
+<p>Курсов: {{ courses_count }} · Записей: {{ students_count }} · На проверке: {{ pending_count }}</p>
+<ul>
+    <li><a href="{% url 'course_add' %}">Создать курс</a></li>
+    <li><a href="{% url 'submissions_list' %}">Проверка работ</a></li>
+    <li><a href="{% url 'analytics' %}">Аналитика</a></li>
+</ul>
+{% elif user.is_authenticated %}
+<h2>Мои курсы</h2>
+{% if my_enrollments %}
+<ul>
+    {% for e in my_enrollments %}
+    <li><a href="{% url 'course_detail' e.course.pk %}">{{ e.course.name }}</a> — {{ e.progress }}%</li>
+    {% endfor %}
+</ul>
+{% else %}
+<p class="empty"><a href="{% url 'courses_list' %}">Выбрать курс</a></p>
+{% endif %}
+{% else %}
+<p><a href="{% url 'login' %}">Войти</a> · <a href="{% url 'register' %}">Регистрация</a></p>
+{% endif %}
+{% endblock %}

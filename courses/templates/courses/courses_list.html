@@ -1,21 +1,43 @@
-{% load static %}
-<!DOCTYPE html>
-<html>
-    <head>
-        <link rel="stylesheet" href="{% static 'css/style.css' %}">
-    </head>
-    <body>
-        <h2>Курсы</h2>
-        <a href="/courses/add/">Добавить курс</a>
-        <ul>
-            {% for course in courses %}
-                <li>
-                    <h2>Название курса: {{ course.name }}</h2>
-                    <p>Стоимость курса: {{ course.price }}</p>
-                    <a href="/courses/{{ course.id }}/edit/">Редактировать</a>
-                    <a href="/courses/{{ course.id }}/delete/">Удалить</a>
-                </li>
-            {% endfor %}
-        </ul>
-    </body>
-</html>
+{% extends "courses/base.html" %}
+
+{% block title %}Каталог{% endblock %}
+
+{% block content %}
+<h1>Каталог курсов</h1>
+{% if user.is_staff %}<p><a href="{% url 'course_add' %}">+ Добавить курс</a></p>{% endif %}
+
+<form method="get" class="filters">
+    <input type="search" name="search" placeholder="Поиск" value="{{ filters.search|default:'' }}">
+    <select name="level">
+        <option value="">Уровень</option>
+        <option value="beginner" {% if filters.level == 'beginner' %}selected{% endif %}>Beginner</option>
+        <option value="intermediate" {% if filters.level == 'intermediate' %}selected{% endif %}>Intermediate</option>
+        <option value="advanced" {% if filters.level == 'advanced' %}selected{% endif %}>Advanced</option>
+    </select>
+    <select name="category">
+        <option value="">Категория</option>
+        <option value="programming" {% if filters.category == 'programming' %}selected{% endif %}>Programming</option>
+        <option value="design" {% if filters.category == 'design' %}selected{% endif %}>Design</option>
+        <option value="marketing" {% if filters.category == 'marketing' %}selected{% endif %}>Marketing</option>
+        <option value="business" {% if filters.category == 'business' %}selected{% endif %}>Business</option>
+    </select>
+    <button type="submit">Найти</button>
+</form>
+
+{% if courses %}
+<ul class="course-list">
+    {% for course in courses %}
+    <li>
+        <strong><a href="{% url 'course_detail' course.pk %}">{{ course.name }}</a></strong>
+        — {% if course.price == 0 %}бесплатно{% else %}{{ course.price }} ₽{% endif %}
+        · {{ course.get_level_display }} · {{ course.students_count }} студ.
+        {% if not course.published %}(черновик){% endif %}
+        {% if course.id in enrolled_ids %}(записан){% endif %}
+        <br><span class="hint">{{ course.description|truncatechars:80 }}</span>
+    </li>
+    {% endfor %}
+</ul>
+{% else %}
+<p class="empty">Курсы не найдены.</p>
+{% endif %}
+{% endblock %}
